@@ -31,7 +31,8 @@ jobs:
       - name: Run Xray scan
         run: |
           echo "Starting Xray scan of the repository..."
-          jf scan --format json --licenses --watches=iac-watch > xray-report.json
+          # Add "." as the source pattern to scan the entire repository
+          jf scan "." --format json --licenses --watches=iac-watch > xray-report.json
         continue-on-error: true
 
       - name: Generate scan summary
