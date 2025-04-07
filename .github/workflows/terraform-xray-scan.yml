@@ -1,4 +1,4 @@
-name: Terraform JFrog Xray Scan
+name: JFrog Xray Repository Scan
 
 on:
   push:
@@ -8,50 +8,49 @@ on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  xray_scan:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup JFrog CLI
+      - name: Set up JFrog CLI
         uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_URL: ${{ secrets.JFROG_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
 
-      - name: Verify JFrog CLI version and configuration
-        run: |
-          jf --version
-          jf c show
+      - name: Configure JFrog CLI
+        run: jf config use ${{ secrets.JFROG_URL }} --access-token ${{ secrets.JFROG_ACCESS_TOKEN }}
 
-      # ✅ Run scan using Xray watch (iac-watch must be defined in JFrog with IaC rules)
-      - name: Scan Terraform files using JFrog Xray
+      - name: Run Xray scan
         run: |
-          echo "Scanning Terraform files with JFrog Xray..."
-          jf scan . --watches=iac-watch --format=json --licenses --vuln --recursive > scan-results.json
-        continue-on-error: true  # Allow the workflow to continue even if vulnerabilities are found
+          echo "Starting Xray scan of the repository..."
+          jf scan --format json --licenses --watches=iac-watch > xray-report.json
+        continue-on-error: true
 
       - name: Generate scan summary
         run: |
-          echo "=== Terraform Files Scanned ==="
-          find . -name "*.tf" | wc -l
-          
-          echo "=== Vulnerabilities Summary ==="
-          grep -o '"severity":"[A-Z]*"' scan-results.json | sort | uniq -c || echo "No vulnerabilities found"
+          echo "=== Scan Summary ==="
+          echo "Files scanned:"
+          find . -type f | wc -l
+          echo "Vulnerabilities found:"
+          jq -r '.vulnerabilities | length' xray-report.json
+          echo "High severity vulnerabilities:"
+          jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json
 
-      - name: Upload scan results as artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload scan report
+        uses: actions/upload-artifact@v3
         with:
-          name: xray-scan-results
-          path: scan-results.json
+          name: xray-scan-report
+          path: xray-report.json
 
-      - name: Check for high severity vulnerabilities
+      - name: Fail on high severity vulnerabilities
         run: |
-          if grep -q '"severity":"HIGH"' scan-results.json; then
-            echo "High severity vulnerabilities found!"
+          HIGH_VULNS=$(jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json)
+          if [ "$HIGH_VULNS" -gt 0 ]; then
+            echo "High severity vulnerabilities found. Failing the build."
             exit 1
           else
-            echo "No high severity vulnerabilities detected."
+            echo "No high severity vulnerabilities found."
           fi
