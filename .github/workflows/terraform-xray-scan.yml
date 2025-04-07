@@ -1,0 +1,55 @@
+name: Terraform JFrog Xray Scan
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+  workflow_dispatch:  
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_URL: ${{ secrets.JFROG_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+
+      - name: Verify JFrog CLI configuration
+        run: jf c show
+        
+      - name: Scan entire repository
+        run: |
+          echo "Scanning the entire repository with JFrog Xray"
+          # The "." indicates the current directory (entire repository)
+          jf s "." --watches=iac_watch --format=json --licenses --vuln --recursive > scan-results.json
+        continue-on-error: true
+
+      - name: Generate scan summary
+        run: |
+          echo "=== Terraform Files Scanned ==="
+          find . -name "*.tf" | wc -l
+          
+          echo "=== Modules Found ==="
+          find ./modules -type d | wc -l
+          
+          echo "=== Vulnerabilities Summary ==="
+          grep -o '\"severity\":\"[A-Z]*\"' scan-results.json | sort | uniq -c || echo "No vulnerabilities found"
+
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: xray-scan-results
+          path: scan-results.json
+
+      - name: Check for high vulnerabilities
+        run: |
+          if grep -q "\"severity\":\"HIGH\"" scan-results.json; then
+            echo "High severity vulnerabilities found!"
+            exit 1
+          fi
