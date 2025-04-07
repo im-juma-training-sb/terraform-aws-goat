@@ -26,12 +26,12 @@ jobs:
           jf --version
           jf c show
 
-      #  Use JFrog CLI's audit command to scan IaC files (Terraform)
-      - name: Scan Terraform files with Xray (IaC scanning)
+      # ✅ Run scan using Xray watch (iac-watch must be defined in JFrog with IaC rules)
+      - name: Scan Terraform files using JFrog Xray
         run: |
-          echo "Scanning Terraform files in the repository with JFrog Xray (IaC type)..."
-          jf audit --type=iac --format=json --output scan-results.json
-        continue-on-error: true  # Allow report generation even if issues are found
+          echo "Scanning Terraform files with JFrog Xray..."
+          jf scan . --watches=iac-watch --format=json --licenses --vuln --recursive > scan-results.json
+        continue-on-error: true  # Allow the workflow to continue even if vulnerabilities are found
 
       - name: Generate scan summary
         run: |
@@ -39,21 +39,19 @@ jobs:
           find . -name "*.tf" | wc -l
           
           echo "=== Vulnerabilities Summary ==="
-          grep -i '"severity":"High"' scan-results.json | sort | uniq -c || echo "No high severity vulnerabilities found"
+          grep -o '"severity":"[A-Z]*"' scan-results.json | sort | uniq -c || echo "No vulnerabilities found"
 
-      # Upload full JSON scan result as an artifact
       - name: Upload scan results as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xray-iac-scan-results
+          name: xray-scan-results
           path: scan-results.json
 
-      # Fail the build if high-severity IaC issues are found
-      - name: Fail on High IaC Vulnerabilities
+      - name: Check for high severity vulnerabilities
         run: |
-          if grep -q '"severity":"High"' scan-results.json; then
-            echo "High severity IaC issues found!"
+          if grep -q '"severity":"HIGH"' scan-results.json; then
+            echo "High severity vulnerabilities found!"
             exit 1
           else
-            echo "No high severity issues found."
+            echo "No high severity vulnerabilities detected."
           fi
