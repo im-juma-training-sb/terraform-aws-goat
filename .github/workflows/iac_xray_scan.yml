@@ -1,4 +1,4 @@
-name: Xray IaC Scan
+name: Artifactory Terraform Upload & Xray Scan
 
 on:
   push:
@@ -20,10 +20,14 @@ jobs:
 
       - name: Configure JFrog CLI
         run: |
-          jfrog config add infomagnus \
-            --url=${{ secrets.GF_URL }} \
-            --access-token=${{ secrets.GF_ACCESS_TOKEN }} \
+          jfrog config add artifactory \
+            --url=${{ secrets.JF_URL }} \
+            --access-token=${{ secrets.JF_ACCESS_TOKEN }} \
             --interactive=false
+
+      - name: Upload Terraform Files to Artifactory
+        run: |
+          jfrog rt upload "*.tf" tf_iac_template-terraform/iac/${GITHUB_REPOSITORY}/${GITHUB_SHA}/ --recursive=false --server-id=artifactory
 
       - name: Run IaC Scan (Terraform + Secrets)
         run: |
