@@ -19,9 +19,14 @@ jobs:
         env:
           JF_URL: ${{ secrets.JFROG_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          JFROG_CLI_AVOID_NEW_VERSION_WARNING: "TRUE"
 
       - name: Configure JFrog CLI
-        run: jf config use ${{ secrets.JFROG_URL }} --access-token ${{ secrets.JFROG_ACCESS_TOKEN }}
+        run: |
+          # First add a server configuration
+          jf config add artifactory --url="${{ secrets.JFROG_URL }}" --access-token="${{ secrets.JFROG_ACCESS_TOKEN }}" --interactive=false
+          # Then set it as the active server
+          jf config use artifactory
 
       - name: Run Xray scan
         run: |
@@ -35,9 +40,9 @@ jobs:
           echo "Files scanned:"
           find . -type f | wc -l
           echo "Vulnerabilities found:"
-          jq -r '.vulnerabilities | length' xray-report.json
+          jq -r '.vulnerabilities | length' xray-report.json || echo "0"
           echo "High severity vulnerabilities:"
-          jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json
+          jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json || echo "0"
 
       - name: Upload scan report
         uses: actions/upload-artifact@v4
@@ -47,7 +52,7 @@ jobs:
 
       - name: Fail on high severity vulnerabilities
         run: |
-          HIGH_VULNS=$(jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json)
+          HIGH_VULNS=$(jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json || echo "0")
           if [ "$HIGH_VULNS" -gt 0 ]; then
             echo "High severity vulnerabilities found. Failing the build."
             exit 1
