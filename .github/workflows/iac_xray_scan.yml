@@ -1,0 +1,35 @@
+name: Xray IaC Scan
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  iac-security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v3
+      with:
+        version: latest
+
+    - name: Configure JFrog CLI
+      run: |
+        jfrog config add infomagnus \
+          --url=${{ secrets.JF_URL }} \
+          --access-token=${{ secrets.JF_ACCESS_TOKEN }} \
+          --interactive=false
+
+    - name: Run IaC Scan (Terraform + Secrets)
+      run: |
+        jfrog xr iac-scan . --output sarif --format json --fail=false
+
+    - name: Upload SARIF report (Optional)
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: result.sarif

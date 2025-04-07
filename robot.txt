@@ -1,0 +1,15 @@
+# Web crawler settings
+User-agent: *
+Disallow: /
+
+# 🚨 Simulated secrets below
+# WARNING: Do not use real secrets in test files.
+
+# AWS_ACCESS_KEY_ID=AKIAFAKE123EXAMPLE
+# AWS_SECRET_ACCESS_KEY=wJalrFAKEEXAMPLE/bPxRfiCYEXAMPLEKEY
+
+# GCP_CREDENTIALS={"type":"service_account","private_key_id":"fakekey123","private_key":"-----BEGIN PRIVATE KEY-----\nFAKEKEY\n-----END PRIVATE KEY-----\n"}
+
+# JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.FAKE.PAYLOAD
+
+# Basic Auth: admin:password123
