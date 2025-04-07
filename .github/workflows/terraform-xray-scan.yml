@@ -27,7 +27,7 @@ jobs:
         run: |
           echo "Scanning the entire repository with JFrog Xray"
           # The "." indicates the current directory (entire repository)
-          jf s "." --watches= --format=json --licenses --vuln --recursive > scan-results.json
+          jf s "." --watches=iac-watch --format=json --licenses --vuln --recursive > scan-results.json
         continue-on-error: true
 
       - name: Generate scan summary
