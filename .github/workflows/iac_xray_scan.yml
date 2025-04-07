@@ -33,7 +33,7 @@ jobs:
         run: |
           jfrog xr scan . --fail=false --output sarif --format json
 
-      - name: Upload SARIF report (Optional)
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: result.sarif
+      # - name: Upload SARIF report (Optional)
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #     sarif_file: result.sarif
