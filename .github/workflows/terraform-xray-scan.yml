@@ -40,7 +40,7 @@ jobs:
           jq -r '.vulnerabilities | map(select(.severity == "High")) | length' xray-report.json
 
       - name: Upload scan report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: xray-scan-report
           path: xray-report.json
